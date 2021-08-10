@@ -1,5 +1,7 @@
 <!DOCTYPE html>
+<!-- code.zip 2020 -->
 <html>
+
 <head>
     <style>
         body,
@@ -8,11 +10,107 @@
             padding: 0;
             overflow: hidden;
         }
+
     </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <meta charset="UTF-8">
+    </meta> <!-- allows for cyrillic and other exotic text in console.logs -->
 </head>
-    <body  onload="init()">
-	   <canvas id="canvas-id" width="800" height="600">
-           <script>
+
+<body onload="onBodyLoad()">
+    <canvas id="canvas-id" width="800" height="600">
+        <script>
+            // How often will the update function from game.js be executed
+            let updateTime;
+
+            // Create global variables
+            let mouseX, mouseY, key_left, key_up, key_right, key_down, key_a, key_z, isKeyPressed;
+
+            // More global variables
+            let canvas, context;
+
+            // Fullscreen flag
+            let endlessCanvas = false;
+
+            // Access to functions, created in game.js
+            var update, draw, mouseup, mousemove, mousedown, keyup, keydown;
+                        
+            const reqAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || function(callback) {
+                setTimeout(callback, 1000 / 30);
+            };
+
+
+            // Custom image class - sets imgObj.img.src after imgObj.draw() has been called
+            class MyImage {
+                constructor(src_, backupColor_) {
+                    this.src = src_;
+                    this.backupColor = backupColor_;
+
+                    // Create image object with no source path
+                    this.img = new Image();
+                    this.canDraw = false;
+                    this.drawBackup = false;
+
+                    this.img.onload = ()=>{
+                        this.canDraw = true;
+                    }
+                    this.img.onerror = ()=>{
+                        this.canDraw = false;
+                        this.drawBackup = true;
+                        throw "Unable to load image " + this.src;
+                    }
+                    
+                }
+                draw(x,y,xs,ys) {
+                    if(xs == undefined) {
+                        xs = this.img.width | 100;
+                        ys = this.img.height | 100;
+                    }
+                    // If img.src is undefined - set it
+                    if(!this.img.src) {
+                        // Load image
+                        this.img.src = this.src;
+                    } else if(this.canDraw) {
+                        try {
+                            context.drawImage(this.img, x, y, xs, ys);
+                        } catch(e) {
+                            this.canDraw = false;
+                            this.drawBackup = true;
+                            throw e;
+                        }
+                    } else if(this.drawBackup) {
+                        context.fillStyle = this.backupColor;
+                        context.fillRect(x, y, xs, ys);
+                    }
+                }
+            }
+
+            // Attach image objects to global scope
+            (function preloadImages() {
+                // Load all images from ./images folder
+                const imageNameList = ["arrowDown", "arrowDownLeft", "arrowDownRight", "arrowLeft", "arrowRight", "arrowUp", "arrowUpLeft", "arrowUpRight", "back3D", "backAlien", "backBeach", "backCactus", "backCake", "backClouds", "backDesert", "backForest", "backGrass", "backHills", "backIndustry", "backMarket", "backMountain", "backMushrooms", "backNight", "backSea", "backSpikes", "backStars", "backSun", "backSunset", "backTower", "backTrees", "backWaterfall", "backWaves", "ballOrTarget", "ballOrTree", "barrelGreen", "barrelGrey", "barrelRed", "bee", "bird", "bomb", "box", "boxAlienGreenSuit", "boxAlienYellowSquare", "boxAlienYellowSuit", "boxItem", "boxItemBoxed", "boxItemDisabled", "boxItemDisabledBoxed", "buildingTile[0]", "buildingTile[10]", "buildingTile[11]", "buildingTile[12]", "buildingTile[13]", "buildingTile[14]", "buildingTile[15]", "buildingTile[16]", "buildingTile[17]", "buildingTile[18]", "buildingTile[19]", "buildingTile[1]", "buildingTile[20]", "buildingTile[21]", "buildingTile[22]", "buildingTile[23]", "buildingTile[24]", "buildingTile[25]", "buildingTile[26]", "buildingTile[27]", "buildingTile[28]", "buildingTile[29]", "buildingTile[2]", "buildingTile[30]", "buildingTile[31]", "buildingTile[32]", "buildingTile[33]", "buildingTile[34]", "buildingTile[35]", "buildingTile[36]", "buildingTile[37]", "buildingTile[38]", "buildingTile[39]", "buildingTile[3]", "buildingTile[40]", "buildingTile[41]", "buildingTile[42]", "buildingTile[43]", "buildingTile[44]", "buildingTile[45]", "buildingTile[46]", "buildingTile[47]", "buildingTile[48]", "buildingTile[49]", "buildingTile[4]", "buildingTile[50]", "buildingTile[51]", "buildingTile[52]", "buildingTile[53]", "buildingTile[54]", "buildingTile[55]", "buildingTile[56]", "buildingTile[57]", "buildingTile[58]", "buildingTile[59]", "buildingTile[5]", "buildingTile[60]", "buildingTile[6]", "buildingTile[7]", "buildingTile[8]", "buildingTile[9]", "building[0]", "building[1]", "building[2]", "building[3]", "bullet", "burgerBronze", "burgerGold", "burgerSilver", "bush1", "bush2", "cactus", "carBlack", "carBlue", "carBody", "carGreen", "carRed", "carYellow", "cat", "cherry", "cloud", "coin[0]", "coin[1]", "coin[2]", "coin[3]", "coin[4]", "coin[5]", "coin[6]", "coin[7]", "coin[8]", "crosshairBlue", "crosshairOutline", "crystal", "dogBite[0]", "dogBite[1]", "dogBite[2]", "dogBite[3]", "dogBite[4]", "dogRun[0]", "dogRun[1]", "dogRun[2]", "dogRun[3]", "dogRun[4]", "dogSleep[0]", "dogSleep[1]", "dogSleep[2]", "dogSleep[3]", "dogWalk[0]", "dogWalk[1]", "dogWalk[2]", "dogWalk[3]", "dogWalk[4]", "duckOutlineTarget", "duckTarget", "enemyBlack1", "enemyBlack2", "enemyBlack3", "enemyBlack4", "enemyBlack5", "enemyBlue1", "enemyBlue2", "enemyBlue3", "enemyBlue4", "enemyBlue5", "enemyGreen1", "enemyGreen2", "enemyGreen3", "enemyGreen4", "enemyGreen5", "enemyRed1", "enemyRed2", "enemyRed3", "enemyRed4", "enemyRed5", "explosion", "explosion1", "explosion2", "femaleAction", "femaleJump", "femaleStand", "femaleWalk1", "flagBlue1", "flagGreen1", "flagRed1", "flagYellow1", "flagYellow2", "flower1", "flower2", "flower3", "flower4", "flower5", "flowerBlue", "flowerPurple", "flowerRed", "flowerSmall", "flyMan", "gemBlue", "gemGreen", "gemRed", "gemYellow", "gem[0]", "gem[10]", "gem[11]", "gem[12]", "gem[13]", "gem[14]", "gem[15]", "gem[16]", "gem[17]", "gem[18]", "gem[19]", "gem[1]", "gem[20]", "gem[21]", "gem[22]", "gem[23]", "gem[24]", "gem[25]", "gem[26]", "gem[27]", "gem[28]", "gem[29]", "gem[2]", "gem[30]", "gem[31]", "gem[32]", "gem[33]", "gem[34]", "gem[35]", "gem[36]", "gem[37]", "gem[38]", "gem[39]", "gem[3]", "gem[40]", "gem[41]", "gem[42]", "gem[43]", "gem[44]", "gem[45]", "gem[46]", "gem[47]", "gem[4]", "gem[5]", "gem[6]", "gem[7]", "gem[8]", "gem[9]", "grass", "groundCake", "groundGrass", "groundSnow", "groundStone", "gummyWorm", "heart", "heartSmall", "heroHello", "heroStand", "heroWalk", "house[0]", "house[1]", "house[2]", "house[3]", "house[4]", "isoCubeBlue", "isoCubeOrange", "isoCubePurple", "jelly[0]", "jelly[1]", "jelly[2]", "jelly[3]", "jelly[4]", "jelly[5]", "jetpack", "jewelBlue", "jewelGreen", "jewelRed", "jewelYellow", "joystick", "kufte", "lampBlue", "lampGray", "lampGreen", "lampPink", "lampRed", "lampYellow", "laserBlue[0]", "laserBlue[1]", "laserBlue[2]", "laserGreen[0]", "laserGreen[1]", "laserGreen[2]", "laserRed[0]", "laserRed[1]", "laserRed[2]", "lava", "lollipopFruitYellow", "missile[0]", "missile[1]", "missile[2]", "missile[3]", "missile[4]", "missile[5]", "missile[6]", "missile[7]", "missile[8]", "missile[9]", "motorBlack", "motorBlue", "motorGreen", "motorRed", "motorYellow", "ninja[0]", "ninja[1]", "ninja[2]", "ninja[3]", "ninja[4]", "ninja[5]", "ninja[6]", "ninja[7]", "ninja[8]", "ninja[9]", "note", "paddle", "paddleGhost", "parrot", "pillBlue", "pillGreen", "pillRed", "pillYellow", "pirateHero", "pirate[0]", "pirate[10]", "pirate[11]", "pirate[12]", "pirate[13]", "pirate[14]", "pirate[15]", "pirate[1]", "pirate[2]", "pirate[3]", "pirate[4]", "pirate[5]", "pirate[6]", "pirate[7]", "pirate[8]", "pirate[9]", "plane", "planeGray", "planeGreen", "playerShip1_blue", "playerShip1_green", "playerShip1_orange", "playerShip1_red", "playerShip2_blue", "playerShip2_green", "playerShip2_orange", "playerShip2_red", "playerShip3_blue", "playerShip3_green", "playerShip3_orange", "playerShip3_red", "powerupBlue", "powerupBlueBolt", "powerupBlueShield", "powerupBlueStar", "powerupGreen", "powerupGreenBolt", "powerupGreenShield", "powerupGreenStar", "powerupRed", "powerupRedBolt", "powerupRedShield", "powerupRedStar", "powerupYellow", "powerupYellowBolt", "powerupYellowShield", "powerupYellowStar", "princess[0]", "princess[10]", "princess[11]", "princess[12]", "princess[13]", "princess[14]", "princess[15]", "princess[16]", "princess[17]", "princess[18]", "princess[19]", "princess[1]", "princess[2]", "princess[3]", "princess[4]", "princess[5]", "princess[6]", "princess[7]", "princess[8]", "princess[9]", "repair", "robot", "robotHero[0]", "robotHero[1]", "robotHero[2]", "robotHero[3]", "robotHero[4]", "robotHero[5]", "robotHero[6]", "robotHero[7]", "robotJump", "rock", "rocket[0]", "rocket[1]", "rocket[2]", "rocket[3]", "sailor", "scrollHorizontal", "scrollVertical", "shieldBronze", "shieldGold", "shieldSilver", "shooter", "shop", "sign", "signExit", "signLeft", "signRight", "slabBlue", "slabRed", "slabYellow", "spaceStation[0]", "spaceStation[1]", "spaceStation[2]", "spaceStation[3]", "spaceship[0]", "spaceship[1]", "spaceship[2]", "spaceship[3]", "spaceship[4]", "spaceship[5]", "spaceship[6]", "spaceship[7]", "spaceship[8]", "spaceship[9]", "spikeMan", "spring", "springMan", "sprung", "spy[0]", "spy[1]", "spy[2]", "spy[3]", "spy[4]", "spy[5]", "spy[6]", "spy[7]", "spy[8]", "spy[9]", "star", "starBronze", "starDiamond", "starGold", "starSilver", "sun", "tank[0]", "tank[1]", "tank[2]", "tank[3]", "tank[4]", "tank[5]", "tank[6]", "tank[7]", "tanksAmmo", "tanksArmor", "thunderBronze", "thunderGold", "thunderGray", "torch", "torchOff", "tree[0]", "tree[1]", "tree[2]", "tree[3]", "tree[4]", "troll", "vehicle[0]", "vehicle[10]", "vehicle[11]", "vehicle[12]", "vehicle[13]", "vehicle[14]", "vehicle[15]", "vehicle[1]", "vehicle[2]", "vehicle[3]", "vehicle[4]", "vehicle[5]", "vehicle[6]", "vehicle[7]", "vehicle[8]", "vehicle[9]", "volcano", "zombie", "zombieHello", "zombieWalk"];
+                const imageBackupColorList = ["black", "black", "black", "black", "black", "black", "black", "black", "blue", "blue", "orange", "pink", "blue", "orange", "green", "green", "orange", "blue", "yellow", "green", "yellow", "blue", "blue", "brown", "black", "purple", "brown", "blue", "blue", "blue", "blue", "blue", "green", "green", "gray", "red", "yellow", "brown", "gray", "brown", "green", "yellow", "yellow", "yellow", "yellow", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "green", "brown", "yellow", "gray", "red", "orange", "green", "black", "blue", "red", "green", "red", "yellow", "orange", "orange", "white", "blue", "white", "green", "green", "green", "black", "black", "black", "black", "black", "blue", "blue", "blue", "blue", "blue", "green", "green", "green", "green", "green", "red", "red", "red", "red", "red", "red", "red", "red", "blue", "blue", "blue", "blue", "blue", "green", "red", "yellow", "yellow", "pink", "brown", "yellow", "red", "orange", "blue", "purple", "red", "blue", "orange", "blue", "green", "red", "yellow", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "blue", "green", "green", "pink", "green", "white", "gray", "pink", "red", "red", "blue", "blue", "blue", "green", "blue", "gray", "brown", "red", "blue", "blue", "blue", "gray", "yellow", "green", "red", "blue", "purple", "gray", "blue", "green", "red", "yellow", "black", "blue", "blue", "blue", "green", "green", "green", "red", "red", "red", "red", "yellow", "red", "blue", "blue", "blue", "blue", "blue", "blue", "red", "red", "red", "black", "blue", "green", "red", "yellow", "purple", "purple", "purple", "purple", "purple", "purple", "purple", "purple", "purple", "purple", "black", "blue", "yellow", "blue", "blue", "green", "red", "yellow", "green", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "brown", "green", "gray", "green", "blue", "green", "orange", "red", "blue", "green", "orange", "red", "blue", "green", "orange", "red", "blue", "blue", "blue", "blue", "green", "green", "green", "green", "red", "red", "red", "red", "yellow", "yellow", "yellow", "yellow", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "pink", "blue", "blue", "yellow", "yellow", "yellow", "yellow", "yellow", "yellow", "yellow", "yellow", "blue", "gray", "red", "red", "red", "red", "red", "black", "black", "brown", "yellow", "gray", "brown", "red", "brown", "brown", "brown", "brown", "blue", "blue", "blue", "red", "red", "red", "red", "red", "red", "red", "red", "red", "red", "blue", "yellow", "blue", "yellow", "red", "orange", "orange", "orange", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "yellow", "brown", "blue", "yellow", "gray", "yellow", "black", "red", "gray", "gray", "green", "green", "red", "red", "black", "black", "brown", "yellow", "gray", "red", "brown", "orange", "red", "yellow", "green", "brown", "green", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "gray", "black", "green", "green", "green", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black", "black"];
+
+                // For each element of array - create a global variable
+                for (let i = 0; i < imageNameList.length; i++) {
+                    let name = imageNameList[i],
+                        backupColor = imageBackupColorList[i];
+
+                    // Handle image names like "gosho[21]"
+                    if (name.indexOf("[") > -1) {
+                        let arrayName = name.slice(0, name.indexOf("["));
+                        let arrayNumber = name.slice(name.indexOf("[") + 1, name.indexOf("]"));
+                        if (!window[arrayName]) {
+                            window[arrayName] = [];
+                        }
+                        window[arrayName][arrayNumber] = tryToLoad(name, backupColor);
+                    } else {
+                        // Handle image names like "pesho"
+                        window[name] = tryToLoad(name, backupColor);
+                    }
+                }
+            }());
+
             function areColliding(Ax, Ay, Awidth, Aheight, Bx, By, Bwidth, Bheight) {
                 if (Bx <= Ax + Awidth) {
                     if (Ax <= Bx + Bwidth) {
@@ -26,591 +124,185 @@
                 return 0;
             };
 
-               
-            function randomInteger(upTo){
-                return Math.floor(Math.random()*upTo);
-            }
-            function tryToLoad(imageNameWithoutDotPng,backupColor){
-                result={};
-                result.img=new Image();
-                result.img.src = "images/"+imageNameWithoutDotPng + ".png";
-                result.color=backupColor;
-                return result;
-            }
-            function tryToLoadWithFullPath(imageNameAndPath,backupColor){
-                result={};
-                result.img=new Image();
-                result.img.src = imageNameAndPath;
-                result.color=backupColor;
-                return result;
-            }           
-            function drawImage(imageWithBackupColorObject,x,y,xs,ys){
-                try{
-                    if (xs!==undefined){
-                        context.drawImage(imageWithBackupColorObject.img, x, y, xs, ys);
-                    }
-                    else{
-                        context.drawImage(imageWithBackupColorObject.img, x, y);
-                    } 
-                }catch(e){
-                   // console.log("Missing image file: " + imageWithBackupColorObject.img.src);
-                    context.fillStyle = imageWithBackupColorObject.color;
-                    if (xs===undefined){xs=100; ys=100;}
-                    context.fillRect(x, y, xs, ys);
-                }
+            function randomInteger(upTo) {
+                return Math.floor(Math.random() * upTo);
             }
 
-           </script>
-           <script src="game.js"></script>
-            <script>
-            if (endlessCanvas == undefined) {
-                var endlessCanvas = false;
+            function drawLine(startX, startY, endX, endY) {
+                // For better performance bunch calls to lineTo without beginPath() and stroke() inbetween.
+                context.beginPath(); // resets the current path
+                context.moveTo(startX, startY);
+                context.lineTo(endX, endY);
+                context.stroke();
             }
-            var canvas = document.getElementById("canvas-id");
-            if (endlessCanvas) {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                window.onresize = function () {
+
+            function tryToLoad(imageNameWithoutDotPng, backupColor) {
+                return new MyImage("./images/" + imageNameWithoutDotPng + ".png", backupColor);
+            }
+            
+            function tryToLoadWithFullPath(pathAndImageName, backupColor) {
+                return new MyImage(pathAndImageName, backupColor);
+            }
+
+            function drawImage(myImageObject, x, y, xs, ys) {
+                myImageObject.draw(x,y,xs,ys);
+            }
+
+            function isFunction(f) {
+                return typeof(f) == "function";
+            }
+
+            function updateMousePosition(e) {
+                let boundingRect = canvas.getBoundingClientRect();
+                mouseX = e.pageX - boundingRect.x;
+                mouseY = e.pageY - boundingRect.y;
+            }
+            
+            function updateMousePositionTouchEvent(e) {
+                let boundingRect = canvas.getBoundingClientRect();
+                let touchobj = e.changedTouches[0];
+                mouseX = touchobj.pageX - boundingRect.x;
+                mouseY = touchobj.pageY - boundingRect.y;
+            }
+
+            function getCanvas() {
+                // Get canvas element
+                canvas = document.getElementById("canvas-id");
+
+                if (endlessCanvas) {
                     canvas.width = window.innerWidth;
                     canvas.height = window.innerHeight;
-                };
-            }
-            else {
-                canvas.width = 800;
-                canvas.height = 600;
-            }
-            var context = canvas.getContext("2d");
-            context.fillStyle = "#0000ff";
-            // global variables with mouse coordinates
-            var mouseX = 0;
-            var mouseY = 0;
-            // some keycodes
-            var key_left = 37;
-            var key_up = 38;
-            var key_right = 39;
-            var key_down = 40;
-            var key_a = 65;
-            var key_z = 90;
-            var isKeyPressed = [];
-            for (i = 0; i < 256; ++i) {
-                isKeyPressed.push(0);
-            }
-            // gridSize = 50; // uncomment or add to game.js if you want a grid
-            var reqAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || function (callback) {
-                setTimeout(callback, 1000 / 30);
-            };
-            var building=[],gem=[],house=[],jelly=[],laserBlue=[],laserGreen=[],laserRed=[], missile=[],
-                ninja=[],pirate=[],princess=[],robot=[],rocket=[],spaceship=[],
-                spaceship=[],spaceStation=[],spy=[],tank=[],tree=[],vehicle=[];
-                arrowDown=tryToLoad("arrowDown","black");
-                arrowDownLeft=tryToLoad("arrowDownLeft","black");
-                arrowDownRight=tryToLoad("arrowDownRight","black");
-                arrowLeft=tryToLoad("arrowLeft","black");
-                arrowRight=tryToLoad("arrowRight","black");
-                arrowUp=tryToLoad("arrowUp","black");
-                arrowUpLeft=tryToLoad("arrowUpLeft","black");
-                arrowUpRight=tryToLoad("arrowUpRight","black");
-                backAlien=tryToLoad("backAlien","blue");
-                backBeach=tryToLoad("backBeach","blue");
-                backCactus=tryToLoad("backCactus","orange");
-                backCake=tryToLoad("backCake","pink");
-                backClouds=tryToLoad("backClouds","blue");
-                backDesert=tryToLoad("backDesert","orange");
-                backForest=tryToLoad("backForest","green");
-                backGrass=tryToLoad("backGrass","green");
-                backHills=tryToLoad("backHills","orange");
-                backIndustry=tryToLoad("backIndustry","blue");
-                backMarket=tryToLoad("backMarket","yellow");
-                backMountain=tryToLoad("backMountain","green");
-                backMushrooms=tryToLoad("backMushrooms","yellow");
-                backNight=tryToLoad("backNight","blue");
-                backSea=tryToLoad("backSea","blue");
-                backSpikes=tryToLoad("backSpikes","brown");
-                backStars=tryToLoad("backStars","black");
-                backSun=tryToLoad("backSun","purple");
-                backSunset=tryToLoad("backSunset","brown");
-                backTower=tryToLoad("backTower","blue");
-                backTrees=tryToLoad("backTrees","blue");
-                backWaterfall=tryToLoad("backWaterfall","blue");
-                backWaves=tryToLoad("backWaves","blue");
-                ballOrTarget=tryToLoad("ballOrTarget","blue");
-                ballOrTree=tryToLoad("ballOrTree","green");
-                barrelGreen=tryToLoad("barrelGreen","green");
-                barrelGrey=tryToLoad("barrelGrey","gray");
-                barrelRed=tryToLoad("barrelRed","red");
-                bee=tryToLoad("bee","yellow");
-                bird=tryToLoad("bird","brown");
-                bomb=tryToLoad("bomb","gray");
-                box=tryToLoad("box","brown");
-                boxAlienGreenSuit=tryToLoad("boxAlienGreenSuit","green");
-                boxAlienYellowSquare=tryToLoad("boxAlienYellowSquare","yellow");
-                boxAlienYellowSuit=tryToLoad("boxAlienYellowSuit","yellow");
-                boxItem=tryToLoad("boxItem","yellow");
-                boxItemBoxed=tryToLoad("boxItemBoxed","yellow");
-                boxItemDisabled=tryToLoad("boxItemDisabled","gray");
-                boxItemDisabledBoxed=tryToLoad("boxItemDisabledBoxed","gray");
-                building[0]=tryToLoad("building[0]","gray");
-                building[1]=tryToLoad("building[1]","gray");
-                building[2]=tryToLoad("building[2]","gray");
-                building[3]=tryToLoad("building[3]","gray");
-                bullet=tryToLoad("bullet","green");
-                burgerBronze=tryToLoad("burgerBronze","brown");
-                burgerGold=tryToLoad("burgerGold","yellow");
-                burgerSilver=tryToLoad("burgerSilver","gray");
-                bush1=tryToLoad("bush1","red");
-                bush2=tryToLoad("bush2","orange");
-                cactus=tryToLoad("cactus","green");
-                cat=tryToLoad("cat","orange");
-                carBlack=tryToLoad("carBlack","black");
-                carBlue=tryToLoad("carBlue","blue");
-                carBody=tryToLoad("carBody","red");
-                carGreen=tryToLoad("carGreen","green");
-                carRed=tryToLoad("carRed","red");
-                carYellow=tryToLoad("carYellow","yellow");
-                cherry=tryToLoad("cherry","orange");
-                cloud=tryToLoad("cloud","white");
-                crosshairBlue=tryToLoad("crosshairBlue","blue");
-                crosshairOutline=tryToLoad("crosshairOutline","white");
-                crystal=tryToLoad("crystal","green");
-                duckOutlineTarget=tryToLoad("duckOutlineTarget","green");
-                duckTarget=tryToLoad("duckTarget","green");
-                enemyBlack1=tryToLoad("enemyBlack1","black");
-                enemyBlack2=tryToLoad("enemyBlack2","black");
-                enemyBlack3=tryToLoad("enemyBlack3","black");
-                enemyBlack4=tryToLoad("enemyBlack4","black");
-                enemyBlack5=tryToLoad("enemyBlack5","black");
-                enemyBlue1=tryToLoad("enemyBlue1","blue");
-                enemyBlue2=tryToLoad("enemyBlue2","blue");
-                enemyBlue3=tryToLoad("enemyBlue3","blue");
-                enemyBlue4=tryToLoad("enemyBlue4","blue");
-                enemyBlue5=tryToLoad("enemyBlue5","blue");
-                enemyGreen1=tryToLoad("enemyGreen1","green");
-                enemyGreen2=tryToLoad("enemyGreen2","green");
-                enemyGreen3=tryToLoad("enemyGreen3","green");
-                enemyGreen4=tryToLoad("enemyGreen4","green");
-                enemyGreen5=tryToLoad("enemyGreen5","green");
-                enemyRed1=tryToLoad("enemyRed1","red");
-                enemyRed2=tryToLoad("enemyRed2","red");
-                enemyRed3=tryToLoad("enemyRed3","red");
-                enemyRed4=tryToLoad("enemyRed4","red");
-                enemyRed5=tryToLoad("enemyRed5","red");
-                explosion=tryToLoad("explosion","red");
-                explosion1=tryToLoad("explosion1","red");
-                explosion2=tryToLoad("explosion2","red");
-                femaleAction=tryToLoad("femaleAction","blue");
-                femaleJump=tryToLoad("femaleJump","blue");
-                femaleStand=tryToLoad("femaleStand","blue");
-                femaleWalk1=tryToLoad("femaleWalk1","blue");
-                flagBlue1=tryToLoad("flagBlue1","blue");
-                flagGreen1=tryToLoad("flagGreen1","green");
-                flagRed1=tryToLoad("flagRed1","red");
-                flagYellow1=tryToLoad("flagYellow1","yellow");
-                flagYellow2=tryToLoad("flagYellow2","yellow");
-                flower1=tryToLoad("flower1","pink");
-                flower2=tryToLoad("flower2","brown");
-                flower3=tryToLoad("flower3","yellow");
-                flower4=tryToLoad("flower4","red");
-                flower5=tryToLoad("flower5","orange");
-                flowerBlue=tryToLoad("flowerBlue","blue");
-                flowerPurple=tryToLoad("flowerPurple","purple");
-                flowerRed=tryToLoad("flowerRed","red");
-                flowerSmall=tryToLoad("flowerSmall","blue");
-                flyMan=tryToLoad("flyMan","orange");
-                gemBlue=tryToLoad("gemBlue","blue");
-                gemGreen=tryToLoad("gemGreen","green");
-                gemRed=tryToLoad("gemRed","red");
-                gemYellow=tryToLoad("gemYellow","yellow");
-                gem[0]=tryToLoad("gem[0]","blue");
-                gem[10]=tryToLoad("gem[10]","green");
-                gem[11]=tryToLoad("gem[11]","blue");
-                gem[12]=tryToLoad("gem[12]","green");
-                gem[13]=tryToLoad("gem[13]","blue");
-                gem[14]=tryToLoad("gem[14]","green");
-                gem[15]=tryToLoad("gem[15]","blue");
-                gem[16]=tryToLoad("gem[16]","green");
-                gem[17]=tryToLoad("gem[17]","blue");
-                gem[18]=tryToLoad("gem[18]","green");
-                gem[19]=tryToLoad("gem[19]","blue");
-                gem[1]=tryToLoad("gem[1]","green");
-                gem[20]=tryToLoad("gem[20]","blue");
-                gem[21]=tryToLoad("gem[21]","green");
-                gem[22]=tryToLoad("gem[22]","blue");
-                gem[23]=tryToLoad("gem[23]","green");
-                gem[24]=tryToLoad("gem[24]","blue");
-                gem[25]=tryToLoad("gem[25]","green");
-                gem[26]=tryToLoad("gem[26]","blue");
-                gem[27]=tryToLoad("gem[27]","green");
-                gem[28]=tryToLoad("gem[28]","blue");
-                gem[29]=tryToLoad("gem[29]","green");
-                gem[2]=tryToLoad("gem[2]","blue");
-                gem[30]=tryToLoad("gem[30]","green");
-                gem[31]=tryToLoad("gem[31]","blue");
-                gem[32]=tryToLoad("gem[32]","green");
-                gem[33]=tryToLoad("gem[33]","blue");
-                gem[34]=tryToLoad("gem[34]","green");
-                gem[35]=tryToLoad("gem[35]","blue");
-                gem[36]=tryToLoad("gem[36]","green");
-                gem[37]=tryToLoad("gem[37]","blue");
-                gem[38]=tryToLoad("gem[38]","green");
-                gem[39]=tryToLoad("gem[39]","blue");
-                gem[3]=tryToLoad("gem[3]","green");
-                gem[40]=tryToLoad("gem[40]","blue");
-                gem[41]=tryToLoad("gem[41]","green");
-                gem[42]=tryToLoad("gem[42]","blue");
-                gem[43]=tryToLoad("gem[43]","green");
-                gem[44]=tryToLoad("gem[44]","blue");
-                gem[45]=tryToLoad("gem[45]","green");
-                gem[46]=tryToLoad("gem[46]","blue");
-                gem[47]=tryToLoad("gem[47]","green");
-                gem[4]=tryToLoad("gem[4]","blue");
-                gem[5]=tryToLoad("gem[5]","green");
-                gem[6]=tryToLoad("gem[6]","blue");
-                gem[7]=tryToLoad("gem[7]","green");
-                gem[8]=tryToLoad("gem[8]","blue");
-                gem[9]=tryToLoad("gem[9]","green");
-                grass=tryToLoad("grass","green");
-                groundCake=tryToLoad("groundCake","pink");
-                groundGrass=tryToLoad("groundGrass","green");
-                groundSnow=tryToLoad("groundSnow","white");
-                groundStone=tryToLoad("groundStone","gray");
-                gummyWorm=tryToLoad("gummyWorm","pink");
-                heart=tryToLoad("heart","red");
-                heartSmall=tryToLoad("heartSmall","red");
-                heroHello=tryToLoad("heroHello","blue");
-                heroStand=tryToLoad("heroStand","blue");
-                heroWalk=tryToLoad("heroWalk","blue");
-                house[0]=tryToLoad("house[0]","green");
-                house[1]=tryToLoad("house[1]","blue");
-                house[2]=tryToLoad("house[2]","gray");
-                house[3]=tryToLoad("house[3]","brown");
-                house[4]=tryToLoad("house[4]","red");
-                jelly[0]=tryToLoad("jelly[0]","gray");
-                jelly[1]=tryToLoad("jelly[1]","yellow");
-                jelly[2]=tryToLoad("jelly[2]","green");
-                jelly[3]=tryToLoad("jelly[3]","red");
-                jelly[4]=tryToLoad("jelly[4]","blue");
-                jelly[5]=tryToLoad("jelly[5]","purple");
-                jetpack=tryToLoad("jetpack","gray");
-                jewelBlue=tryToLoad("jewelBlue","blue");
-                jewelGreen=tryToLoad("jewelGreen","green");
-                jewelRed=tryToLoad("jewelRed","red");
-                jewelYellow=tryToLoad("jewelYellow","yellow");
-                joystick=tryToLoad("joystick","black");
-                laserBlue[0]=tryToLoad("laserBlue[0]","blue");
-                laserBlue[1]=tryToLoad("laserBlue[1]","blue");
-                laserBlue[2]=tryToLoad("laserBlue[2]","blue");
-                laserGreen[0]=tryToLoad("laserGreen[0]","green");
-                laserGreen[1]=tryToLoad("laserGreen[1]","green");
-                laserGreen[2]=tryToLoad("laserGreen[2]","green");
-                laserRed[0]=tryToLoad("laserRed[0]","red");
-                laserRed[1]=tryToLoad("laserRed[1]","red");
-                laserRed[2]=tryToLoad("laserRed[2]","red");
-                lava=tryToLoad("lava","red");
-                lollipopFruitYellow=tryToLoad("lollipopFruitYellow","yellow");
-                missile[0]=tryToLoad("missile[0]","red");
-                missile[1]=tryToLoad("missile[1]","blue");
-                missile[2]=tryToLoad("missile[2]","blue");
-                missile[3]=tryToLoad("missile[3]","blue");
-                missile[4]=tryToLoad("missile[4]","blue");
-                missile[5]=tryToLoad("missile[5]","blue");
-                missile[6]=tryToLoad("missile[6]","blue");
-                missile[7]=tryToLoad("missile[7]","red");
-                missile[8]=tryToLoad("missile[8]","red");
-                missile[9]=tryToLoad("missile[9]","red");
-                motorBlack=tryToLoad("motorBlack","black");
-                motorBlue=tryToLoad("motorBlue","blue");
-                motorGreen=tryToLoad("motorGreen","green");
-                motorRed=tryToLoad("motorRed","red");
-                motorYellow=tryToLoad("motorYellow","yellow");
-                ninja[0]=tryToLoad("ninja[0]","purple");
-                ninja[1]=tryToLoad("ninja[1]","purple");
-                ninja[2]=tryToLoad("ninja[2]","purple");
-                ninja[3]=tryToLoad("ninja[3]","purple");
-                ninja[4]=tryToLoad("ninja[4]","purple");
-                ninja[5]=tryToLoad("ninja[5]","purple");
-                ninja[6]=tryToLoad("ninja[6]","purple");
-                ninja[7]=tryToLoad("ninja[7]","purple");
-                ninja[8]=tryToLoad("ninja[8]","purple");
-                ninja[9]=tryToLoad("ninja[9]","purple");
-                note=tryToLoad("note","black");
-                paddle=tryToLoad("paddle","blue");
-                parrot=tryToLoad("parrot","blue");
-                pillBlue=tryToLoad("pillBlue","blue");
-                pillGreen=tryToLoad("pillGreen","green");
-                pillRed=tryToLoad("pillRed","red");
-                pillYellow=tryToLoad("pillYellow","yellow");
-                pirate=tryToLoad("pirate","green");
-                pirate[0]=tryToLoad("pirate[0]","brown");
-                pirate[10]=tryToLoad("pirate[10]","brown");
-                pirate[11]=tryToLoad("pirate[11]","brown");
-                pirate[12]=tryToLoad("pirate[12]","brown");
-                pirate[13]=tryToLoad("pirate[13]","brown");
-                pirate[14]=tryToLoad("pirate[14]","brown");
-                pirate[15]=tryToLoad("pirate[15]","brown");
-                pirate[1]=tryToLoad("pirate[1]","brown");
-                pirate[2]=tryToLoad("pirate[2]","brown");
-                pirate[3]=tryToLoad("pirate[3]","brown");
-                pirate[4]=tryToLoad("pirate[4]","brown");
-                pirate[5]=tryToLoad("pirate[5]","brown");
-                pirate[6]=tryToLoad("pirate[6]","brown");
-                pirate[7]=tryToLoad("pirate[7]","brown");
-                pirate[8]=tryToLoad("pirate[8]","brown");
-                pirate[9]=tryToLoad("pirate[9]","brown");
-                plane=tryToLoad("plane","green");
-                planeGray=tryToLoad("planeGray","gray");
-                planeGreen=tryToLoad("planeGreen","green");
-                playerShip1_blue=tryToLoad("playerShip1_blue","blue");
-                playerShip1_green=tryToLoad("playerShip1_green","green");
-                playerShip1_orange=tryToLoad("playerShip1_orange","orange");
-                playerShip1_red=tryToLoad("playerShip1_red","red");
-                playerShip2_blue=tryToLoad("playerShip2_blue","blue");
-                playerShip2_green=tryToLoad("playerShip2_green","green");
-                playerShip2_orange=tryToLoad("playerShip2_orange","orange");
-                playerShip2_red=tryToLoad("playerShip2_red","red");
-                playerShip3_blue=tryToLoad("playerShip3_blue","blue");
-                playerShip3_green=tryToLoad("playerShip3_green","green");
-                playerShip3_orange=tryToLoad("playerShip3_orange","orange");
-                playerShip3_red=tryToLoad("playerShip3_red","red");
-                powerupBlue=tryToLoad("powerupBlue","blue");
-                powerupBlueBolt=tryToLoad("powerupBlueBolt","blue");
-                powerupBlueShield=tryToLoad("powerupBlueShield","blue");
-                powerupBlueStar=tryToLoad("powerupBlueStar","blue");
-                powerupGreen=tryToLoad("powerupGreen","green");
-                powerupGreenBolt=tryToLoad("powerupGreenBolt","green");
-                powerupGreenShield=tryToLoad("powerupGreenShield","green");
-                powerupGreenStar=tryToLoad("powerupGreenStar","green");
-                powerupRed=tryToLoad("powerupRed","red");
-                powerupRedBolt=tryToLoad("powerupRedBolt","red");
-                powerupRedShield=tryToLoad("powerupRedShield","red");
-                powerupRedStar=tryToLoad("powerupRedStar","red");
-                powerupYellowShield=tryToLoad("powerupYellowShield","yellow");
-                powerupYellow=tryToLoad("powerupYellow","yellow");
-                powerupYellowBolt=tryToLoad("powerupYellowBolt","yellow");
-                powerupYellowStar=tryToLoad("powerupYellowStar","yellow");
-                princess[0]=tryToLoad("princess[0]","pink");
-                princess[10]=tryToLoad("princess[10]","pink");
-                princess[11]=tryToLoad("princess[11]","pink");
-                princess[12]=tryToLoad("princess[12]","pink");
-                princess[13]=tryToLoad("princess[13]","pink");
-                princess[14]=tryToLoad("princess[14]","pink");
-                princess[15]=tryToLoad("princess[15]","pink");
-                princess[16]=tryToLoad("princess[16]","pink");
-                princess[17]=tryToLoad("princess[17]","pink");
-                princess[18]=tryToLoad("princess[18]","pink");
-                princess[19]=tryToLoad("princess[19]","pink");
-                princess[1]=tryToLoad("princess[1]","pink");
-                princess[2]=tryToLoad("princess[2]","pink");
-                princess[3]=tryToLoad("princess[3]","pink");
-                princess[4]=tryToLoad("princess[4]","pink");
-                princess[5]=tryToLoad("princess[5]","pink");
-                princess[6]=tryToLoad("princess[6]","pink");
-                princess[7]=tryToLoad("princess[7]","pink");
-                princess[8]=tryToLoad("princess[8]","pink");
-                princess[9]=tryToLoad("princess[9]","pink");
-                repair=tryToLoad("repair","blue");
-                robot=tryToLoad("robot","blue");
-                robotJump=tryToLoad("robotJump","blue");
-                robot[0]=tryToLoad("robot[0]","yellow");
-                robot[1]=tryToLoad("robot[1]","yellow");
-                robot[2]=tryToLoad("robot[2]","yellow");
-                robot[3]=tryToLoad("robot[3]","yellow");
-                robot[4]=tryToLoad("robot[4]","yellow");
-                robot[5]=tryToLoad("robot[5]","yellow");
-                robot[6]=tryToLoad("robot[6]","yellow");
-                robot[7]=tryToLoad("robot[7]","yellow");
-                rock=tryToLoad("rock","gray");
-                rocket[0]=tryToLoad("rocket[0]","red");
-                rocket[1]=tryToLoad("rocket[1]","red");
-                rocket[2]=tryToLoad("rocket[2]","red");
-                rocket[3]=tryToLoad("rocket[3]","red");
-                sailor=tryToLoad("sailor","red");
-                scrollHorizontal=tryToLoad("scrollHorizontal","black");
-                scrollVertical=tryToLoad("scrollVertical","black");
-                shieldBronze=tryToLoad("shieldBronze","brown");
-                shieldGold=tryToLoad("shieldGold","yellow");
-                shieldSilver=tryToLoad("shieldSilver","gray");
-                shooter=tryToLoad("shooter","brown");
-                shop=tryToLoad("shop","red");
-                sign=tryToLoad("sign","brown");
-                signExit=tryToLoad("signExit","brown");
-                signLeft=tryToLoad("signLeft","brown");
-                signRight=tryToLoad("signRight","brown");
-                spaceship=tryToLoad("spaceship","red");
-                spaceship[0]=tryToLoad("spaceship[0]","red");
-                spaceship[1]=tryToLoad("spaceship[1]","red");
-                spaceship[2]=tryToLoad("spaceship[2]","red");
-                spaceship[3]=tryToLoad("spaceship[3]","red");
-                spaceship[4]=tryToLoad("spaceship[4]","red");
-                spaceship[5]=tryToLoad("spaceship[5]","red");
-                spaceship[6]=tryToLoad("spaceship[6]","red");
-                spaceship[7]=tryToLoad("spaceship[7]","red");
-                spaceship[8]=tryToLoad("spaceship[8]","red");
-                spaceStation[0]=tryToLoad("spaceStation[0]","blue");
-                spaceStation[1]=tryToLoad("spaceStation[1]","yellow");
-                spaceStation[2]=tryToLoad("spaceStation[2]","blue");
-                spaceStation[3]=tryToLoad("spaceStation[3]","yellow");
-                spikeMan=tryToLoad("spikeMan","red");
-                spring=tryToLoad("spring","orange");
-                springMan=tryToLoad("springMan","orange");
-                sprung=tryToLoad("sprung","orange");
-                spy[0]=tryToLoad("spy[0]","black");
-                spy[1]=tryToLoad("spy[1]","black");
-                spy[2]=tryToLoad("spy[2]","black");
-                spy[3]=tryToLoad("spy[3]","black");
-                spy[4]=tryToLoad("spy[4]","black");
-                spy[5]=tryToLoad("spy[5]","black");
-                spy[6]=tryToLoad("spy[6]","black");
-                spy[7]=tryToLoad("spy[7]","black");
-                spy[8]=tryToLoad("spy[8]","black");
-                spy[9]=tryToLoad("spy[9]","black");
-                star=tryToLoad("star","yellow");
-                starBronze=tryToLoad("starBronze","brown");
-                starDiamond=tryToLoad("starDiamond","blue");
-                starGold=tryToLoad("starGold","yellow");
-                starSilver=tryToLoad("starSilver","gray");
-                sun=tryToLoad("sun","yellow");
-                tanksAmmo=tryToLoad("tanksAmmo","black");
-                tanksArmor=tryToLoad("tanksArmor","red");
-                tank[0]=tryToLoad("tank[0]","gray");
-                tank[1]=tryToLoad("tank[1]","gray");
-                tank[2]=tryToLoad("tank[2]","green");
-                tank[3]=tryToLoad("tank[3]","green");
-                tank[4]=tryToLoad("tank[4]","red");
-                tank[5]=tryToLoad("tank[5]","red");
-                tank[6]=tryToLoad("tank[6]","black");
-                tank[7]=tryToLoad("tank[7]","black");
-                thunderBronze=tryToLoad("thunderBronze","brown");
-                thunderGold=tryToLoad("thunderGold","yellow");
-                thunderGray=tryToLoad("thunderGray","gray");
-                torch=tryToLoad("torch","red");
-                torchOff=tryToLoad("torchOff","brown");
-                tree[0]=tryToLoad("tree[0]","orange");
-                tree[1]=tryToLoad("tree[1]","red");
-                tree[2]=tryToLoad("tree[2]","yellow");
-                tree[3]=tryToLoad("tree[3]","green");
-                tree[4]=tryToLoad("tree[4]","brown");
-                troll=tryToLoad("troll","green");
-                vehicle[0]=tryToLoad("vehicle[0]","gray");
-                vehicle[10]=tryToLoad("vehicle[10]","gray");
-                vehicle[11]=tryToLoad("vehicle[11]","gray");
-                vehicle[12]=tryToLoad("vehicle[12]","gray");
-                vehicle[13]=tryToLoad("vehicle[13]","gray");
-                vehicle[14]=tryToLoad("vehicle[14]","gray");
-                vehicle[15]=tryToLoad("vehicle[15]","gray");
-                vehicle[1]=tryToLoad("vehicle[1]","gray");
-                vehicle[2]=tryToLoad("vehicle[2]","gray");
-                vehicle[3]=tryToLoad("vehicle[3]","gray");
-                vehicle[4]=tryToLoad("vehicle[4]","gray");
-                vehicle[5]=tryToLoad("vehicle[5]","gray");
-                vehicle[6]=tryToLoad("vehicle[6]","gray");
-                vehicle[7]=tryToLoad("vehicle[7]","gray");
-                vehicle[8]=tryToLoad("vehicle[8]","gray");
-                vehicle[9]=tryToLoad("vehicle[9]","gray");
-                volcano=tryToLoad("volcano","black");
-                zombie=tryToLoad("zombie","green");
-                zombieHello=tryToLoad("zombieHello","green");
-                zombieWalk=tryToLoad("zombieWalk","green");
-            function redraw() {
-                context.clearRect(0, 0, canvas.width, canvas.height);
-                draw(); // call progammer's draw() function
-                context.globalAlpha = 1;
-                // draw grid
-                //context.fillStyle = "#FF0000";
-                context.font = "10px Arial";
-                if (typeof gridSize != "undefined" && gridSize >= 25) {
-                    context.fillText(0, 4, 10);
-                    context.beginPath();
-                    for (i = gridSize; i < canvas.width; i += gridSize) {
-                        context.moveTo(i, 0);
-                        context.lineTo(i, canvas.height);
-                        context.fillText(i, i + 4, 10);
-                    }
-                    for (i = gridSize; i < canvas.height; i += gridSize) {
-                        context.moveTo(0, i);
-                        context.lineTo(canvas.width, i);
-                        context.fillText(i, 4, i + 10);
-                    }
-                    context.stroke();
+
+                    // Change canvas.width and .height on browser resize
+                    window.onresize = function() {
+                        canvas.width = window.innerWidth;
+                        canvas.height = window.innerHeight;
+                    };
+                } else {
+                    // Default canvas size
+                    canvas.width = 800;
+                    canvas.height = 600;
                 }
 
+                // Get 2d context
+                context = canvas.getContext("2d");
+                context.fillStyle = "#0000ff";
+            }
+            
+            function attachEvents() {
+                // Events for touchscreen devices
+                if ('ontouchstart' in window || navigator.maxTouchPoints) {
+                    isMobile = true;
+                    window.addEventListener("touchstart", function(e) {
+                        // Update global mouseX, mouseY variables
+                        updateMousePositionTouchEvent(e);
+                        if(isFunction(mousedown)){
+                            // Call mousedown from game.js if it exists
+                            mousedown();
+                        }
+                    });
+                    window.addEventListener("touchend", function(e) {
+                        updateMousePositionTouchEvent(e);
+                        if(isFunction(mouseup)) {
+                            mouseup();
+                        }
+                    });
+                    window.addEventListener("touchmove", function(e) {
+                        updateMousePositionTouchEvent(e);
+                    });
+                }
+
+                // Update global mouseX, mouseY variables
+                window.addEventListener("mousemove", function(e) {
+                    updateMousePosition(e);
+                });
+
+                // Call mousemove, mouseup, mousedown function from game.js if they exist
+                if (isFunction(mousemove)) {
+                    window.addEventListener("mousemove", mousemove);
+                }
+                if (isFunction(mouseup)) {
+                    window.addEventListener("mouseup", mouseup);
+                }
+                if (isFunction(mousedown)) {
+                    window.addEventListener("mousedown", mousedown);
+                }
+
+                // Update global isKeyPressed array
+                window.addEventListener("keydown", function(e) {
+                    isKeyPressed[e.keyCode] = 1;
+                    if(isFunction(keydown)) {
+                        keydown(e.keyCode);
+                    }
+                });
+                window.addEventListener("keyup", function(e) {
+                    isKeyPressed[e.keyCode] = 0;
+                    if(isFunction(keyup)) {
+                        keyup(e.keyCode);
+                    }
+                });
+            }
+            // Redraw will be executed many times
+            function redraw() {
+                // Clear the canvas
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
+                context.globalAlpha = 1;
+                context.font = "10px Arial";
+                context.fillStyle = "blue";
+                context.textBaseline = "top";
+
+                // Call draw function from game.js
+                draw();
+
+                
+                // Call redraw after some time (the browser decides this time)
                 reqAnimationFrame(redraw);
             };
 
-            function callupdate() {
-                update(); // call programmer's update() function
-                setTimeout(callupdate, 10); // and 10 ms after that ...
-            };
+            function initGlobalVariables() {
+                updateTime = 10;
+                mouseX = 0;
+                mouseX = 0;
+                mouseY = 0; 
+                key_left = 37; 
+                key_up = 38; 
+                key_right = 39; 
+                key_down = 40; 
+                key_a = 65; 
+                key_z = 90; 
+                isKeyPressed = new Array(256).fill(0);
+            }
+            // Starts game when body element is loaded
+            function onBodyLoad() {
 
-            function init() {
-                if ('ontouchstart' in window || navigator.maxTouchPoints) {
-                    isMobile = true;
-                    window.addEventListener("touchstart", function (e) {
-                        var touchobj = e.changedTouches[0];
-                        mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
-                        mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
-                        mousedown();
-                    });
-                    window.addEventListener("touchend", function (e) {
-                        var touchobj = e.changedTouches[0];
-                        mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
-                        mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
-                        mouseup();
-                    });
-                    window.addEventListener("touchmove", function (e) {
-                        var touchobj = e.changedTouches[0];
-                        mouseX = parseInt(touchobj.pageX - canvas.offsetLeft);
-                        mouseY = parseInt(touchobj.pageY - canvas.offsetTop);
-                    });
+                initGlobalVariables();
+
+                getCanvas();
+
+                attachEvents();
+
+                if (!isFunction(draw)) {
+                    // Draw error on canvas when function draw is not present in game.js
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+                    context.globalAlpha = 1;
+                    context.fillStyle = "#FF0000";
+                    context.font = "20px Arial";
+                    context.fillText("Press <F12> for error info!", 40, 40);
+                } else {
+                    // Call programmers init function if it exists in game.js
+                    if(isFunction(init)) {
+                        init();
+                    }
+
+                    redraw();
+                    setInterval(update, updateTime);
                 }
-                window.addEventListener("mousemove", function (e) {
-                    mouseX = e.pageX - canvas.offsetLeft;
-                    mouseY = e.pageY - canvas.offsetTop;
-                });
-                if (typeof mousemove != "undefined") {
-                    window.addEventListener("mousemove", mousemove);
-                }
-                if (typeof mouseup != "undefined") {
-                    window.addEventListener("mouseup", mouseup);
-                }
-                if (typeof mousedown != "undefined") {
-                    window.addEventListener("mousedown", mousedown);
-                }
-                if (typeof keydown != "undefined") {
-                    window.addEventListener("keydown", function (e) {
-                        isKeyPressed[e.keyCode] = 1;
-                        keydown(e.keyCode);
-                    });
-                }
-                else {
-                    window.addEventListener("keydown", function (e) {
-                        isKeyPressed[e.keyCode] = 1;
-                    });
-                }
-                if (typeof keyup != "undefined") {
-                    window.addEventListener("keyup", function (e) {
-                        isKeyPressed[e.keyCode] = 0;
-                        keyup(e.keyCode);
-                    });
-                }
-                else {
-                    window.addEventListener("keyup", function (e) {
-                        isKeyPressed[e.keyCode] = 0;
-                    });
-                }
-                if (typeof draw == "undefined") {
-                    redraw = function () {
-                        context.clearRect(0, 0, canvas.width, canvas.height);
-                        context.globalAlpha = 1;
-                        context.fillStyle = "#FF0000";
-                        context.font = "20px Arial";
-                        context.fillText("Press <F12> for error info!", 40, 40);
-                    };
-                }
-                redraw();
-                callupdate();
-            };
-            //version 11- edited by ivo i iashu. LOADED IMAGES ADDED! Should be fine with all touchscreendevices.
-            </script>
-        </canvas>
-    </body>
+            }
+        </script>
+        <!-- user's game file -->
+        <script src="game.js"></script>
+    </canvas>
+</body>
+
 </html>

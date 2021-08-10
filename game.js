@@ -1,280 +1,171 @@
-/**let speed = 2;
-let pos = {
-    x: 0, 
-    y: 0
-};
+// Suzdavame promenlivi
+let myX, myY;
  
-let wall = {
-    pos: {
-        x: 400,
-        y: 300,
-    },
-    r: 250
-};
-let norm ={
-    pos: {
-        x: 0,
-        y: 0,
-    }
-} 
-let k2 = {
-    pos: {
-        x: 0,
-        y: 0,
-    },
-    vel:{
-        x: 0,
-        y: 0,
-    },
-    r: 30
-};
-function vecAdd(v, u) {
-    return {
-        x: v.x + u.x, 
-        y: v.y + u.y
-    };
+function init() {
+    // Kodut tuk se izpulnqva vednuj v nachaloto
+    myX = 300;
+    myY = 300;
 }
- 
-function vecSub(v, u) {
-    return {
-        x: v.x - u.x,
-        y: v.y - u.y
-    };
-}
- 
-function vecMul(v, a) {
-    return {
-        x: v.x * a,
-        y: v.y * a
-    };
-}
- 
-function vecDiv(v, a) {
-    if (a == 0) return {x: 0, y: 0};
-    return {
-        x: v.x / a,
-        y: v.y / a
-    };
-}
- 
-function vecLen(v) {
-    return Math.sqrt(v.x * v.x + v.y * v.y);
-}
- 
-function vecUnit(v) {
-    return vecDiv(v, vecLen(v))
-}
- 
-function collidingCirclePoint(k, v) {
-    return vecLen(vecSub(k.pos, v)) < k.r;
-}
- 
-function collidingCircleCircle(k1, k2) {
-    return vecLen(vecSub(k1.pos, k2.pos)) < k1.r + k2.r;
-}
- 
-function collidingCirclePerimeter(k1, k2) {
-    let len = vecLen(vecSub(k1.pos, k2.pos));
-    return len >= k2.r - k1.r && len <= k2.r + k1.r;
-}
-k2.pos = {x: wall.pos.x, y: wall.pos.y};
-var vel = (Math.random()*2-1)*10;
-var vel2 = (Math.random()*2-1)*10;
-k2.vel.x = vel;
-k2.vel.y = vel2;
-k2.vel.x/=(vecLen(k2.vel)/5);
-k2.vel.y/=(vecLen(k2.vel)/5);
-function update() {
-    k2.pos = vecAdd(k2.pos, k2.vel);
-    norm.pos = vecAdd(vecSub(wall.pos,k2.pos), 0);
-    if (collidingCirclePerimeter(k2, wall)) {
-        k2.vel.x*=-1;
-        k2.vel.y*=-1;
-    }
-}
- 
-function fillCircle(k) {
+function drawLine(startX, startY, endX, endY)
+{
     context.beginPath();
-    context.arc(k.pos.x, k.pos.y, k.r, 0, 2 * Math.PI);
-    context.fill(); // za krug
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
+    context.stroke();
 }
- 
-function strokeCircle(k) {
-    context.beginPath();
-    context.arc(k.pos.x, k.pos.y, k.r, 0, 2 * Math.PI);
-    context.stroke(); // za okrujnost
-}
- 
-function draw() {
-    strokeCircle(wall);
-    fillCircle(k2);
-};
- 
-function keydown(key) {
-};
- 
-function mouseup() {
-};
-**/
-let gravity = {x: 0, y: 1};
-let history = 100;
-let pos = {
-    x: 0, 
-    y: 0,
-};
- 
-let wall = {
-    pos: {
-        x: 400,
-        y: 300,
-    },
-    r: 300,
-};
- 
-let particles = [];
-let colors = ["red", "orange", "yellow", "lime", "cyan", "magenta"];
- 
-for (let i = 0; i < 6; i++) {
-    particles[i] = {
-        pos: {
-            x: 400 + i * 50,
-            y: 300,
-        },
-        vel: {
-            x: 0,
-            y: 0,
-        },
-        path: [],
-        r: 15,
-        color: colors[i],
+class Point {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+    draw() {
+        context.fillRect(this.x - 5, this.y - 5, 10, 10);
     }
 }
  
-function vecAdd(v, u) {
-    return {
-        x: v.x + u.x, 
-        y: v.y + u.y,
-    };
+class Line {
+    constructor(begin, end) {
+        this.begin = begin;
+        this.end = end;
+ 
+        this.recalculate();
+    }   
+    draw() {
+        drawLine(this.begin.x, this.begin.y, this.end.x, this.end.y);
+    }
+    recalculate() {
+        if(this.begin.x == this.end.x) {
+            this.begin.x += 0.1;            
+        }
+        this.m = (this.begin.y - this.end.y) / (this.begin.x - this.end.x);
+        this.b = this.begin.y - this.begin.x * this.m;
+    }
 }
  
-function vecSub(v, u) {
-    return {
-        x: v.x - u.x,
-        y: v.y - u.y,
-    };
+// Vrushta true ako ne e imalo problem.
+function fixEdgeCases(wall, ray, intersection) {
+    // Tova pravi fenercheto da sveti samo napred
+    let isBetweenx = false, isBetweeny = false;
+    if((ray.end.x <= ray.begin.x && ray.begin.x <= intersection.x) || (ray.end.x >= ray.begin.x && ray.begin.x >= intersection.x)) {
+        isBetweenx = true;
+    }
+    if((ray.end.y <= ray.begin.y && ray.begin.y <= intersection.y) || (ray.end.y >= ray.begin.y && ray.begin.y >= intersection.y)) {
+        isBetweeny = true;
+    }
+    if(isBetweeny && isBetweenx) {
+        return false;
+    }
+ 
+    // Tova vnimava stenata da ne byde prava, a otsechka
+    isBetweenx = false, isBetweeny = false;
+    if((wall.begin.x <= intersection.x && intersection.x <= wall.end.x) || (wall.begin.x >= intersection.x && intersection.x >= wall.end.x)) {
+        isBetweenx = true;
+    }
+    if((wall.begin.y <= intersection.y && intersection.y <= wall.end.y) || (wall.begin.y >= intersection.y && intersection.y >= wall.end.y)) {
+        isBetweeny = true;
+    }
+    if(!isBetweeny || !isBetweenx) {
+        return false;
+    }
+ 
+    return true;
 }
  
-function vecMul(v, a) {
-    return {
-        x: v.x * a,
-        y: v.y * a,
-    };
+function intersect(wall, ray) {
+    wall.recalculate();
+    ray.recalculate();
+ 
+    let x = (wall.b - ray.b) / (ray.m - wall.m);
+    let y = x * wall.m + wall.b;
+ 
+    let answerPoint = new Point(x, y);
+ 
+    if(fixEdgeCases(wall, ray, answerPoint)) {
+        return answerPoint;        
+    } else {
+        return undefined;
+    }
 }
  
-function vecDiv(v, a) {
-    if (a == 0) return {x: 0, y: 0};
-    return {
-        x: v.x / a,
-        y: v.y / a,
-    };
-}
+let player = new Point(0, 0);
+let ray = new Line(player, new Point(1000, 1000));
+let walls = [];
+walls.push(new Line(new Point(0, 0), new Point(800, 0)));
+walls.push(new Line(new Point(800, 600), new Point(800, 0)));
+walls.push(new Line(new Point(800, 600), new Point(0, 600)));
+walls.push(new Line(new Point(0, 0), new Point(0, 600)));
+walls.push(new Line(new Point(100, 150), new Point(420, 69)));
+walls.push(new Line(new Point(400, 200), new Point(500, 440)));
  
-function vecLen(v) {
-    return Math.sqrt(v.x * v.x + v.y * v.y);
-}
+let intersections = [];
  
-function vecUnit(v) {
-    return vecDiv(v, vecLen(v))
-}
- 
-function vecDot(v, u) {
-    return v.x * u.x + v.y * u.y;
-}
- 
-function collidingCirclePoint(k, v) {
-    return vecLen(vecSub(k.pos, v)) <= k.r;
-}
- 
-function collidingCircleCircle(k1, k2) {
-    return vecLen(vecSub(k1.pos, k2.pos)) <= k1.r + k2.r;
-}
- 
-function collidingCirclePerimeter(k, p) {
-    let len = vecLen(vecSub(k.pos, p.pos));
-    return len >= p.r - k.r && len <= p.r + k.r;
-}
- 
-function calcNorm(p, w) {
-    return vecUnit(vecSub(w.pos, p.pos));
-}
- 
-function reflect(ray, norm) {
-    const r = vecMul(ray, -1);
-    const nPrim = vecMul(norm, vecDot(r, norm));
-    const l = vecSub(vecMul(nPrim, 2), r);
-    return l;
+function distance(a, b) {
+    return Math.sqrt(Math.pow((a.x - b.x), 2), Math.pow((a.y - b.y), 2));
 }
  
 function update() {
-    for (man of particles) {
-        man.vel = vecAdd(man.vel, gravity);
-        man.pos = vecAdd(man.pos, man.vel);
-        if (collidingCirclePerimeter(man, wall)) {
-            man.pos = vecSub(man.pos, man.vel); // undo 2 lines above
-            let norm = calcNorm(man, wall);
-            man.vel = reflect(man.vel, norm);
-        } else {
-            for (woman of particles) {
-                if (man == woman) continue;
-                if (collidingCircleCircle(man, woman)) {
-                    man.pos = vecSub(man.pos, man.vel); // undo 2 lines above
-                    let norm = calcNorm(man, woman);
-                    man.vel = reflect(man.vel, norm);
+    // Kodut tuk se izpulnqva (okolo) 100 puti v sekunda
+    myX = myX + (mouseX - myX) / 10;
+    myY = myY + (mouseY - myY) / 10;
+ 
+    player = new Point(myX, myY);
+ 
+    ray.begin = new Point(myX, myY);
+ 
+    intersections = []
+ 
+    for(let angle = 0; angle < Math.PI * 2; angle += 0.002) {
+        let intersection = undefined;
+        minimumDistance = 100000000;
+        let rotatedRay = new Line(player, new Point(player.x + Math.cos(angle), player.y + Math.sin(angle)));
+ 
+        for(let i = 0; i < walls.length; i ++) {
+            let currentIntersection = intersect(walls[i], rotatedRay);
+            if(currentIntersection == undefined) {
+                continue;
+            } else {
+                if(minimumDistance > distance(currentIntersection, player)) {
+                    intersection = currentIntersection;
+                    minimumDistance = distance(currentIntersection, player);
                 }
             }
         }
+        if(intersection != undefined) {
+            intersections.push(intersection);
+        }
     }
-};
- 
-function fillCircle(k) {
-    context.fillStyle = k.color;
-    context.strokeStyle = k.color;
-    k.path.push({x: k.pos.x, y: k.pos.y});
-    if (k.path.length > history) {
-        k.path.shift();
-    }
-    context.beginPath();
-    context.moveTo(k.path[0].x, k.path[0].y);
-    for (p of k.path)
-        context.lineTo(p.x, p.y);
-    context.stroke();
- 
-    context.beginPath();
-    context.arc(k.pos.x, k.pos.y, k.r, 0, 2 * Math.PI);
-    context.fill(); // za krug
-}
- 
-function strokeCircle(k) {
-    context.beginPath();
-    context.arc(k.pos.x, k.pos.y, k.r, 0, 2 * Math.PI);
-    context.stroke(); // za okrujnost
 }
  
 function draw() {
-    context.fillStyle = "black";
-    context.fillRect(0, 0, 800, 600);
+    // Tuk naprogramirai kakvo da se risuva
+    player.draw();
  
-    context.fillStyle = "white";
-    context.strokeStyle = "white";
- 
-    strokeCircle(wall);
-    for (p of particles) {
-        fillCircle(p);
+    for(let i = 0; i < walls.length; i ++) {
+        walls[i].draw();
     }
-};
  
-function keydown(key) {
-};
+    if(intersections.length > 3) {
+        context.beginPath();
+        context.moveTo(intersections[0].x, intersections[0].y);
+        for(let i = 1; i < intersections.length; i ++) {
+            context.lineTo(intersections[i].x, intersections[i].y);
+        }
+        context.closePath();
+        context.fill();
+    }
  
+    return;
+    context.beginPath();
+    context.arc(300, 300, 30, 0, 2 * Math.PI);
+    context.fill();
+    context.stroke();
+}
 function mouseup() {
-};
+    // Pri klik s lqv buton - pokaji koordinatite na mishkata
+    console.log("Mouse clicked at", mouseX, mouseY);
+}
+function keyup(key) {
+    // Pechatai koda na natisnatiq klavish
+    console.log("Pressed", key);
+}
+
